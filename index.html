@@ -75,6 +75,25 @@
           drawLandmarks(ctx, landmarks);
         }
       }
+
+      if (results.multiHandLandmarks) {
+  for (const landmarks of results.multiHandLandmarks) {
+
+    drawConnectors(ctx, landmarks, HAND_CONNECTIONS);
+    drawLandmarks(ctx, landmarks);
+
+    if (isThumbsUp(landmarks)) {
+      console.log("👍 Thumbs up detected!");
+      
+      // Example visual feedback
+      ctx.fillStyle = "lime";
+      ctx.font = "40px Arial";
+      ctx.fillText("👍", 20, 50);
+    }
+  }
+}
+
+      
     });
 
     async function startCamera() {
@@ -124,6 +143,23 @@
   animationId = requestAnimationFrame(processFrame);
 }
 
+    function isThumbsUp(landmarks) {
+  // Thumb (vertical check)
+  const thumbTip = landmarks[4];
+  const thumbIP = landmarks[3];
+
+  const thumbUp = thumbTip.y < thumbIP.y; // higher on screen
+
+  // Other fingers (folded)
+  const indexFolded = landmarks[8].y > landmarks[6].y;
+  const middleFolded = landmarks[12].y > landmarks[10].y;
+  const ringFolded = landmarks[16].y > landmarks[14].y;
+  const pinkyFolded = landmarks[20].y > landmarks[18].y;
+
+  return thumbUp && indexFolded && middleFolded && ringFolded && pinkyFolded;
+}
+
+    
     flipBtn.addEventListener('click', () => {
       facingMode = (facingMode === "user") ? "environment" : "user";
       startCamera();
