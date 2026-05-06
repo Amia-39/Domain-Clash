@@ -160,13 +160,45 @@
   }
 }
 
-    function getGesture(landmarks, handedness) {
+    function isFingersCrossed(landmarks, handedness) {
   const thumb = isThumbExtended(landmarks, handedness);
   const index = isFingerExtended(8, 6, landmarks);
   const middle = isFingerExtended(12, 10, landmarks);
   const ring = isFingerExtended(16, 14, landmarks);
   const pinky = isFingerExtended(20, 18, landmarks);
 
+  // Basic shape: only index + middle up
+  if (!(index && middle && !ring && !pinky)) {
+    return false;
+  }
+
+  // Optional: thumb tucked for stricter detection
+  if (thumb) {
+    return false;
+  }
+
+  // 🔀 Check if index & middle are "crossed"
+  const indexTip = landmarks[8];
+  const middleTip = landmarks[12];
+
+  const dist = distance(indexTip, middleTip);
+
+  // Threshold — tweak this if needed
+  const CLOSE_THRESHOLD = 0.05;
+
+  return dist < CLOSE_THRESHOLD;
+}
+
+    function getGesture(landmarks, handedness) {
+  const thumb = isThumbExtended(landmarks, handedness);
+  const index = isFingerExtended(8, 6, landmarks);
+  const middle = isFingerExtended(12, 10, landmarks);
+  const ring = isFingerExtended(16, 14, landmarks);
+  const pinky = isFingerExtended(20, 18, landmarks);
+const gesture = isFingersCrossed(landmarks, handedness)
+  ? "crossed"
+  : getGesture(landmarks, handedness);
+      
   // Rock ✊
   if (!thumb && !index && !middle && !ring && !pinky) {
     return "rock";
@@ -183,6 +215,10 @@
   }
 
   return null;
+}
+
+    function distance(a, b) {
+  return Math.hypot(a.x - b.x, a.y - b.y);
 }
     
     flipBtn.addEventListener('click', () => {
