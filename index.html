@@ -93,6 +93,25 @@
   }
 }
 
+      if (results.multiHandLandmarks && results.multiHandedness) {
+  for (let i = 0; i < results.multiHandLandmarks.length; i++) {
+    const landmarks = results.multiHandLandmarks[i];
+    const handedness = results.multiHandedness[i].label;
+
+    drawConnectors(ctx, landmarks, HAND_CONNECTIONS);
+    drawLandmarks(ctx, landmarks);
+
+    const gesture = getGesture(landmarks, handedness);
+
+    if (gesture) {
+      console.log(gesture);
+
+      ctx.fillStyle = "yellow";
+      ctx.font = "40px Arial";
+      ctx.fillText(gesture.toUpperCase(), 20, 50);
+    }
+  }
+}
       
     });
 
@@ -159,6 +178,45 @@
   return thumbUp && indexFolded && middleFolded && ringFolded && pinkyFolded;
 }
 
+    function isFingerExtended(tip, pip, landmarks) {
+  return landmarks[tip].y < landmarks[pip].y;
+}
+
+    function isThumbExtended(landmarks, handedness) {
+  const thumbTip = landmarks[4];
+  const thumbIP = landmarks[3];
+
+  if (handedness === "Right") {
+    return thumbTip.x < thumbIP.x;
+  } else {
+    return thumbTip.x > thumbIP.x;
+  }
+}
+
+    function getGesture(landmarks, handedness) {
+  const thumb = isThumbExtended(landmarks, handedness);
+  const index = isFingerExtended(8, 6, landmarks);
+  const middle = isFingerExtended(12, 10, landmarks);
+  const ring = isFingerExtended(16, 14, landmarks);
+  const pinky = isFingerExtended(20, 18, landmarks);
+
+  // Rock ✊
+  if (!thumb && !index && !middle && !ring && !pinky) {
+    return "rock";
+  }
+
+  // Paper ✋
+  if (thumb && index && middle && ring && pinky) {
+    return "paper";
+  }
+
+  // Scissors ✌️
+  if (!thumb && index && middle && !ring && !pinky) {
+    return "scissors";
+  }
+
+  return null;
+}
     
     flipBtn.addEventListener('click', () => {
       facingMode = (facingMode === "user") ? "environment" : "user";
