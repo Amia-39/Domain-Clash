@@ -1,19 +1,84 @@
 <!DOCTYPE html>
 <html>
+<head>
+  <title>Camera + Hand Tracking</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+
+    video, canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: auto;
+    }
+
+    video.mirror, canvas.mirror {
+      transform: scaleX(-1);
+    }
+
+    button {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 10;
+      padding: 10px;
+    }
+  </style>
+</head>
 <body>
-  <video id="video" autoplay playsinline></video>
-  <br>
+
   <button id="flip">Flip Camera</button>
+
+  <video id="video" autoplay playsinline></video>
+  <canvas id="canvas"></canvas>
+
+  <!-- MediaPipe -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
 
   <script>
     const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
     const flipBtn = document.getElementById('flip');
 
     let currentStream = null;
-    let facingMode = "user"; // start with front camera
+    let facingMode = "user";
+
+    // Setup MediaPipe
+    const hands = new Hands({
+      locateFile: (file) =>
+        `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    });
+
+    hands.setOptions({
+      maxNumHands: 2,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.7,
+      minTrackingConfidence: 0.5
+    });
+
+    hands.onResults((results) => {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      if (results.multiHandLandmarks) {
+        for (const landmarks of results.multiHandLandmarks) {
+          drawConnectors(ctx, landmarks, HAND_CONNECTIONS);
+          drawLandmarks(ctx, landmarks);
+        }
+      }
+    });
 
     async function startCamera() {
-      // Stop old stream if it exists
+      // Stop previous stream
       if (currentStream) {
         currentStream.getTracks().forEach(track => track.stop());
       }
@@ -26,9 +91,30 @@
 
         currentStream = stream;
         video.srcObject = stream;
+
+        // Mirror front camera
+        if (facingMode === "user") {
+          video.classList.add("mirror");
+          canvas.classList.add("mirror");
+        } else {
+          video.classList.remove("mirror");
+          canvas.classList.remove("mirror");
+        }
+
+        // Wait until video is ready
+        await video.play();
+
+        // Start processing frames
+        processFrame();
+
       } catch (err) {
         console.error("Camera error:", err);
       }
+    }
+
+    async function processFrame() {
+      await hands.send({ image: video });
+      requestAnimationFrame(processFrame);
     }
 
     flipBtn.addEventListener('click', () => {
@@ -38,5 +124,6 @@
 
     startCamera();
   </script>
+
 </body>
 </html>
