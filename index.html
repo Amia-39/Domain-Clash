@@ -78,44 +78,51 @@
     });
 
     async function startCamera() {
-      // Stop previous stream
-      if (currentStream) {
-        currentStream.getTracks().forEach(track => track.stop());
-      }
+  // Stop previous stream
+  if (currentStream) {
+    currentStream.getTracks().forEach(track => track.stop());
+  }
 
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: facingMode },
-          audio: false
-        });
+  // 🚨 Stop previous animation loop
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+    animationId = null;
+  }
 
-        currentStream = stream;
-        video.srcObject = stream;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: facingMode },
+      audio: false
+    });
 
-        // Mirror front camera
-        if (facingMode === "user") {
-          video.classList.add("mirror");
-          canvas.classList.add("mirror");
-        } else {
-          video.classList.remove("mirror");
-          canvas.classList.remove("mirror");
-        }
+    currentStream = stream;
+    video.srcObject = stream;
 
-        // Wait until video is ready
-        await video.play();
-
-        // Start processing frames
-        processFrame();
-
-      } catch (err) {
-        console.error("Camera error:", err);
-      }
+    // Mirror front camera
+    if (facingMode === "user") {
+      video.classList.add("mirror");
+      canvas.classList.add("mirror");
+    } else {
+      video.classList.remove("mirror");
+      canvas.classList.remove("mirror");
     }
 
-    async function processFrame() {
-      await hands.send({ image: video });
-      requestAnimationFrame(processFrame);
-    }
+    await video.play();
+
+    // ✅ Start fresh loop
+    processFrame();
+
+  } catch (err) {
+    console.error("Camera error:", err);
+  }
+}
+
+    let animationId = null;
+
+  async function processFrame() {
+  await hands.send({ image: video });
+  animationId = requestAnimationFrame(processFrame);
+}
 
     flipBtn.addEventListener('click', () => {
       facingMode = (facingMode === "user") ? "environment" : "user";
