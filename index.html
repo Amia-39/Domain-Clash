@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Camera + Hand Tracking</title>
+  <title>Hand Tracking + Gestures</title>
   <style>
     body {
       margin: 0;
@@ -31,80 +31,166 @@
 </head>
 <body>
 
-  <button id="flip">Flip Camera</button>
+<button id="flip">Flip Camera</button>
 
-  <video id="video" autoplay playsinline></video>
-  <canvas id="canvas"></canvas>
+<video id="video" autoplay playsinline></video>
+<canvas id="canvas"></canvas>
 
-  <!-- MediaPipe -->
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+<!-- MediaPipe -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
 
-  <script>
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    const flipBtn = document.getElementById('flip');
+<script>
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const flipBtn = document.getElementById('flip');
 
-    let currentStream = null;
-    let facingMode = "user";
+let currentStream = null;
+let facingMode = "user";
+let animationId = null;
 
-    // Setup MediaPipe
-    const hands = new Hands({
-      locateFile: (file) =>
-        `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-    });
+// =====================
+// MediaPipe setup
+// =====================
+const hands = new Hands({
+  locateFile: (file) =>
+    `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+});
 
-    hands.setOptions({
-      maxNumHands: 2,
-      modelComplexity: 1,
-      minDetectionConfidence: 0.7,
-      minTrackingConfidence: 0.5
-    });
+hands.setOptions({
+  maxNumHands: 1,
+  modelComplexity: 1,
+  minDetectionConfidence: 0.7,
+  minTrackingConfidence: 0.5
+});
 
-    hands.onResults((results) => {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+// =====================
+// Helpers
+// =====================
+function isFingerExtended(tip, pip, landmarks) {
+  return landmarks[tip].y < landmarks[pip].y;
+}
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+function isThumbExtended(landmarks, handedness) {
+  const tip = landmarks[4];
+  const ip = landmarks[3];
 
-      if (results.multiHandLandmarks) {
-        for (const landmarks of results.multiHandLandmarks) {
-          drawConnectors(ctx, landmarks, HAND_CONNECTIONS);
-          drawLandmarks(ctx, landmarks);
-        }
-      }
+  if (handedness === "Right") {
+    return tip.x < ip.x;
+  } else {
+    return tip.x > ip.x;
+  }
+}
 
-      if (results.multiHandLandmarks && results.multiHandedness) {
-  for (let i = 0; i < results.multiHandLandmarks.length; i++) {
-    const landmarks = results.multiHandLandmarks[i];
-    const handedness = results.multiHandedness[i].label;
+function distance(a, b) {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+// =====================
+// Gestures
+// =====================
+
+function isThumbsUp(landmarks) {
+  const thumbUp = landmarks[4].y < landmarks[3].y;
+
+  const indexFolded = landmarks[8].y > landmarks[6].y;
+  const middleFolded = landmarks[12].y > landmarks[10].y;
+  const ringFolded = landmarks[16].y > landmarks[14].y;
+  const pinkyFolded = landmarks[20].y > landmarks[18].y;
+
+  return thumbUp && indexFolded && middleFolded && ringFolded && pinkyFolded;
+}
+
+function isFingersCrossed(landmarks, handedness) {
+  const thumb = isThumbExtended(landmarks, handedness);
+  const index = isFingerExtended(8, 6, landmarks);
+  const middle = isFingerExtended(12, 10, landmarks);
+  const ring = isFingerExtended(16, 14, landmarks);
+  const pinky = isFingerExtended(20, 18, landmarks);
+
+  if (!(index && middle && !ring && !pinky)) return false;
+  if (thumb) return false;
+
+  const indexTip = landmarks[8];
+  const middleTip = landmarks[12];
+
+  const dist = distance(indexTip, middleTip);
+
+  const CLOSE_THRESHOLD = 0.05;
+
+  const crossedDirection =
+    (indexTip.y > landmarks[10].y && middleTip.y < landmarks[6].y) ||
+    (middleTip.y > landmarks[6].y && indexTip.y < landmarks[10].y);
+
+  return dist < CLOSE_THRESHOLD && crossedDirection;
+}
+
+function getRPSGesture(landmarks, handedness) {
+  const thumb = isThumbExtended(landmarks, handedness);
+  const index = isFingerExtended(8, 6, landmarks);
+  const middle = isFingerExtended(12, 10, landmarks);
+  const ring = isFingerExtended(16, 14, landmarks);
+  const pinky = isFingerExtended(20, 18, landmarks);
+
+  if (!thumb && !index && !middle && !ring && !pinky) return "rock";
+  if (thumb && index && middle && ring && pinky) return "paper";
+  if (!thumb && index && middle && !ring && !pinky) return "scissors";
+
+  return null;
+}
+
+// =====================
+// Main processing
+// =====================
+hands.onResults((results) => {
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  if (results.multiHandLandmarks && results.multiHandedness) {
+    const landmarks = results.multiHandLandmarks[0];
+    const handedness = results.multiHandedness[0].label;
 
     drawConnectors(ctx, landmarks, HAND_CONNECTIONS);
     drawLandmarks(ctx, landmarks);
 
-    const gesture = getGesture(landmarks, handedness);
+    let gesture = null;
+
+    // Priority order matters
+    if (isThumbsUp(landmarks)) {
+      gesture = "thumbs up";
+    } else if (isFingersCrossed(landmarks, handedness)) {
+      gesture = "crossed";
+    } else {
+      gesture = getRPSGesture(landmarks, handedness);
+    }
 
     if (gesture) {
-      console.log(gesture);
-
       ctx.fillStyle = "yellow";
       ctx.font = "40px Arial";
       ctx.fillText(gesture.toUpperCase(), 20, 50);
+
+      console.log(gesture);
     }
   }
-}
-      
-    });
+});
 
-    async function startCamera() {
-  // Stop previous stream
+// =====================
+// Camera + loop
+// =====================
+async function processFrame() {
+  await hands.send({ image: video });
+  animationId = requestAnimationFrame(processFrame);
+}
+
+async function startCamera() {
   if (currentStream) {
     currentStream.getTracks().forEach(track => track.stop());
   }
 
-  // 🚨 Stop previous animation loop
   if (animationId) {
     cancelAnimationFrame(animationId);
     animationId = null;
@@ -119,7 +205,6 @@
     currentStream = stream;
     video.srcObject = stream;
 
-    // Mirror front camera
     if (facingMode === "user") {
       video.classList.add("mirror");
       canvas.classList.add("mirror");
@@ -129,8 +214,6 @@
     }
 
     await video.play();
-
-    // ✅ Start fresh loop
     processFrame();
 
   } catch (err) {
@@ -138,98 +221,17 @@
   }
 }
 
-    let animationId = null;
+// =====================
+// Flip button
+// =====================
+flipBtn.addEventListener('click', () => {
+  facingMode = (facingMode === "user") ? "environment" : "user";
+  startCamera();
+});
 
-  async function processFrame() {
-  await hands.send({ image: video });
-  animationId = requestAnimationFrame(processFrame);
-}
-
-    function isFingerExtended(tip, pip, landmarks) {
-  return landmarks[tip].y < landmarks[pip].y;
-}
-
-    function isThumbExtended(landmarks, handedness) {
-  const thumbTip = landmarks[4];
-  const thumbIP = landmarks[3];
-
-  if (handedness === "Right") {
-    return thumbTip.x < thumbIP.x;
-  } else {
-    return thumbTip.x > thumbIP.x;
-  }
-}
-
-    function isFingersCrossed(landmarks, handedness) {
-  const thumb = isThumbExtended(landmarks, handedness);
-  const index = isFingerExtended(8, 6, landmarks);
-  const middle = isFingerExtended(12, 10, landmarks);
-  const ring = isFingerExtended(16, 14, landmarks);
-  const pinky = isFingerExtended(20, 18, landmarks);
-
-  // Basic shape: only index + middle up
-  if (!(index && middle && !ring && !pinky)) {
-    return false;
-  }
-
-  // Optional: thumb tucked for stricter detection
-  if (thumb) {
-    return false;
-  }
-
-  // 🔀 Check if index & middle are "crossed"
-  const indexTip = landmarks[8];
-  const middleTip = landmarks[12];
-
-  const dist = distance(indexTip, middleTip);
-
-  // Threshold — tweak this if needed
-  const CLOSE_THRESHOLD = 0.05;
-
-  return dist < CLOSE_THRESHOLD;
-}
-
-    
-const gesture = isFingersCrossed(landmarks, handedness)
-  ? "crossed"
-  : getGesture(landmarks, handedness);
-
-    function getGesture(landmarks, handedness) {
-  const thumb = isThumbExtended(landmarks, handedness);
-  const index = isFingerExtended(8, 6, landmarks);
-  const middle = isFingerExtended(12, 10, landmarks);
-  const ring = isFingerExtended(16, 14, landmarks);
-  const pinky = isFingerExtended(20, 18, landmarks);
-      
-  // Rock ✊
-  if (!thumb && !index && !middle && !ring && !pinky) {
-    return "rock";
-  }
-
-  // Paper ✋
-  if (thumb && index && middle && ring && pinky) {
-    return "paper";
-  }
-
-  // Scissors ✌️
-  if (!thumb && index && middle && !ring && !pinky) {
-    return "scissors";
-  }
-
-  return null;
-}
-
-    function distance(a, b) {
-  return Math.hypot(a.x - b.x, a.y - b.y);
-}
-    
-    flipBtn.addEventListener('click', () => {
-      facingMode = (facingMode === "user") ? "environment" : "user";
-      startCamera();
-    });
-
-    startCamera();
-  </script>
+// Start
+startCamera();
+</script>
 
 </body>
 </html>
