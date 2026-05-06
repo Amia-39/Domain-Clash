@@ -181,8 +181,23 @@ hands.onResults((results) => {
 // =====================
 // Camera + loop
 // =====================
+let processingFrame = false;
+
 async function processFrame() {
-  await hands.send({ image: video });
+
+  // Skip if MediaPipe still busy
+  if (!processingFrame) {
+    processingFrame = true;
+
+    try {
+      await hands.send({ image: video });
+    } catch (err) {
+      console.error(err);
+    }
+
+    processingFrame = false;
+  }
+
   animationId = requestAnimationFrame(processFrame);
 }
 
