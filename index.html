@@ -1,25 +1,40 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <title>Camera Feed</title>
-</head>
 <body>
   <video id="video" autoplay playsinline></video>
+  <br>
+  <button id="flip">Flip Camera</button>
 
   <script>
     const video = document.getElementById('video');
+    const flipBtn = document.getElementById('flip');
+
+    let currentStream = null;
+    let facingMode = "user"; // start with front camera
 
     async function startCamera() {
+      // Stop old stream if it exists
+      if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+      }
+
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
+          video: { facingMode: facingMode },
           audio: false
         });
+
+        currentStream = stream;
         video.srcObject = stream;
       } catch (err) {
-        console.error("Error accessing camera:", err);
+        console.error("Camera error:", err);
       }
     }
+
+    flipBtn.addEventListener('click', () => {
+      facingMode = (facingMode === "user") ? "environment" : "user";
+      startCamera();
+    });
 
     startCamera();
   </script>
