@@ -189,15 +189,17 @@
   return dist < CLOSE_THRESHOLD;
 }
 
+    
+const gesture = isFingersCrossed(landmarks, handedness)
+  ? "crossed"
+  : getGesture(landmarks, handedness);
+
     function getGesture(landmarks, handedness) {
   const thumb = isThumbExtended(landmarks, handedness);
   const index = isFingerExtended(8, 6, landmarks);
   const middle = isFingerExtended(12, 10, landmarks);
   const ring = isFingerExtended(16, 14, landmarks);
   const pinky = isFingerExtended(20, 18, landmarks);
-const gesture = isFingersCrossed(landmarks, handedness)
-  ? "crossed"
-  : getGesture(landmarks, handedness);
       
   // Rock ✊
   if (!thumb && !index && !middle && !ring && !pinky) {
