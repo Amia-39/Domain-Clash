@@ -1,1 +1,27 @@
-test
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Camera Feed</title>
+</head>
+<body>
+  <video id="video" autoplay playsinline></video>
+
+  <script>
+    const video = document.getElementById('video');
+
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false
+        });
+        video.srcObject = stream;
+      } catch (err) {
+        console.error("Error accessing camera:", err);
+      }
+    }
+
+    startCamera();
+  </script>
+</body>
+</html>
