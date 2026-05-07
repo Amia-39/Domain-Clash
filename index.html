@@ -151,7 +151,7 @@ function isFingersCrossed(landmarks, handedness) {
   const tipDistance =
     distance(indexTip, middleTip);
 
-  if (tipDistance > 0.08) {
+  if (tipDistance > 0.10) {
     return false;
   }
 
@@ -178,7 +178,7 @@ function isFingersCrossed(landmarks, handedness) {
   const depthDifference =
     Math.abs(indexTip.z - middleTip.z);
 
-  if (depthDifference < 0.02) {
+  if (depthDifference < 0.01) {
     return false;
   }
 
@@ -189,7 +189,7 @@ function isFingersCrossed(landmarks, handedness) {
   const horizontalDistance =
     Math.abs(indexTip.x - middleTip.x);
 
-  if (horizontalDistance > 0.06) {
+  if (horizontalDistance > 0.08) {
     return false;
   }
 
