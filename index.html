@@ -111,89 +111,56 @@ function distance(a, b) {
 // Gestures
 // ======================
 
-function isFingersCrossed(landmarks, handedness) {
-
-  // ----------------------
-  // Finger states
-  // ----------------------
-
-  const index =
-    isFingerExtended(8, 6, landmarks);
-
-  const middle =
-    isFingerExtended(12, 10, landmarks);
-
-  const ring =
-    isFingerExtended(16, 14, landmarks);
-
-  const pinky =
-    isFingerExtended(20, 18, landmarks);
-
-  // Only index + middle up
-  if (!(index && middle && !ring && !pinky)) {
-    return false;
-  }
-
-  // ----------------------
-  // Key points
-  // ----------------------
+function isFingersCrossed(landmarks) {
 
   const indexTip = landmarks[8];
   const middleTip = landmarks[12];
 
-  const indexKnuckle = landmarks[6];
-  const middleKnuckle = landmarks[10];
+  const indexBase = landmarks[5];
+  const middleBase = landmarks[9];
 
-  // ----------------------
-  // Tips must be close
-  // ----------------------
+  // -------------------------
+  // Tips close together
+  // -------------------------
 
-  const tipDistance =
-    distance(indexTip, middleTip);
+  const tipDistance = distance(
+    indexTip,
+    middleTip
+  );
 
-  if (tipDistance > 0.10) {
-    return false;
-  }
+  // -------------------------
+  // Bases separated
+  // -------------------------
 
-  // ----------------------
-  // Detect crossing direction
-  // ----------------------
+  const baseDistance = distance(
+    indexBase,
+    middleBase
+  );
 
-  const verticallyCrossed =
-    (indexTip.y > middleKnuckle.y) ||
-    (middleTip.y > indexKnuckle.y);
+  // -------------------------
+  // Fingers overlap horizontally
+  // -------------------------
 
-  if (!verticallyCrossed) {
-    return false;
-  }
+  const crossedHorizontally =
+    (indexTip.x > middleTip.x &&
+     indexBase.x < middleBase.x)
+    ||
+    (indexTip.x < middleTip.x &&
+     indexBase.x > middleBase.x);
 
-  // ----------------------
-  // Z depth check
-  // ----------------------
-  // One finger should be
-  // noticeably in front
-  // of the other
-  // ----------------------
+  // -------------------------
+  // Depth difference
+  // -------------------------
 
   const depthDifference =
     Math.abs(indexTip.z - middleTip.z);
 
-  if (depthDifference < 0.01) {
-    return false;
-  }
-
-  // ----------------------
-  // Horizontal overlap
-  // ----------------------
-
-  const horizontalDistance =
-    Math.abs(indexTip.x - middleTip.x);
-
-  if (horizontalDistance > 0.08) {
-    return false;
-  }
-
-  return true;
+  return (
+    tipDistance < 0.09 &&
+    baseDistance > 0.03 &&
+    crossedHorizontally &&
+    depthDifference > 0.01
+  );
 }
 
 function isFingersCrossed(landmarks, handedness) {
