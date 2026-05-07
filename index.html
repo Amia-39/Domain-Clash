@@ -8,14 +8,22 @@
       overflow: hidden;
     }
 
-    video, canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: auto;
-    }
+   video, canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: auto;
+}
 
+video {
+  z-index: 1;
+}
+
+canvas {
+  z-index: 2;
+  pointer-events: none;
+}
     video.mirror, canvas.mirror {
       transform: scaleX(-1);
     }
@@ -148,7 +156,7 @@ hands.onResults((results) => {
   canvas.height = video.videoHeight;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
 
   if (results.multiHandLandmarks && results.multiHandedness) {
     const landmarks = results.multiHandLandmarks[0];
