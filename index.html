@@ -209,58 +209,6 @@ function isFingersCrossed(landmarks, handedness) {
   );
 }
 
-function getRPSGesture(landmarks, handedness) {
-
-  const thumb =
-    isThumbExtended(landmarks, handedness);
-
-  const index =
-    isFingerExtended(8, 6, landmarks);
-
-  const middle =
-    isFingerExtended(12, 10, landmarks);
-
-  const ring =
-    isFingerExtended(16, 14, landmarks);
-
-  const pinky =
-    isFingerExtended(20, 18, landmarks);
-
-  // Rock
-  if (
-    !thumb &&
-    !index &&
-    !middle &&
-    !ring &&
-    !pinky
-  ) {
-    return "rock";
-  }
-
-  // Paper
-  if (
-    thumb &&
-    index &&
-    middle &&
-    ring &&
-    pinky
-  ) {
-    return "paper";
-  }
-
-  // Scissors
-  if (
-    !thumb &&
-    index &&
-    middle &&
-    !ring &&
-    !pinky
-  ) {
-    return "scissors";
-  }
-
-  return null;
-}
 
 // ======================
 // Drawing + detection
@@ -290,6 +238,7 @@ hands.onResults((results) => {
     const handedness =
       results.multiHandedness[0].label;
 
+    // Draw hand skeleton
     drawConnectors(
       ctx,
       landmarks,
@@ -301,42 +250,28 @@ hands.onResults((results) => {
       landmarks
     );
 
-    let gesture = null;
+    // Detect crossed fingers only
+    const crossed =
+      isFingersCrossed(
+        landmarks,
+        handedness
+      );
 
-    // Priority order
-    if (
-  isFingersCrossed(
-    landmarks,
-    handedness
-  )
-) {
-
-  gesture = "crossed";
-
-} else {
-      gesture =
-        getRPSGesture(
-          landmarks,
-          handedness
-        );
-    }
-
-    if (gesture) {
+    if (crossed) {
 
       ctx.fillStyle = "yellow";
       ctx.font = "40px Arial";
 
       ctx.fillText(
-        gesture.toUpperCase(),
+        "CROSSED",
         20,
         50
       );
 
-      console.log(gesture);
+      console.log("crossed");
     }
   }
 });
-
 // ======================
 // Stable processing loop
 // ======================
