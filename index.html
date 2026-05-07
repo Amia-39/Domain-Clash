@@ -119,47 +119,42 @@ function isFingersCrossed(landmarks) {
   const indexBase = landmarks[5];
   const middleBase = landmarks[9];
 
-  // -------------------------
-  // Tips close together
-  // -------------------------
+  const tipDistance =
+    distance(indexTip, middleTip);
 
-  const tipDistance = distance(
-    indexTip,
-    middleTip
-  );
+  const baseDistance =
+    distance(indexBase, middleBase);
 
-  // -------------------------
-  // Bases separated
-  // -------------------------
+  const horizontalCross1 =
+    indexTip.x > middleTip.x &&
+    indexBase.x < middleBase.x;
 
-  const baseDistance = distance(
-    indexBase,
-    middleBase
-  );
-
-  // -------------------------
-  // Fingers overlap horizontally
-  // -------------------------
+  const horizontalCross2 =
+    indexTip.x < middleTip.x &&
+    indexBase.x > middleBase.x;
 
   const crossedHorizontally =
-    (indexTip.x > middleTip.x &&
-     indexBase.x < middleBase.x)
-    ||
-    (indexTip.x < middleTip.x &&
-     indexBase.x > middleBase.x);
-
-  // -------------------------
-  // Depth difference
-  // -------------------------
+    horizontalCross1 || horizontalCross2;
 
   const depthDifference =
     Math.abs(indexTip.z - middleTip.z);
 
+  // DEBUG
+  console.log({
+    tipDistance,
+    baseDistance,
+    depthDifference,
+    crossedHorizontally,
+    indexTipX: indexTip.x,
+    middleTipX: middleTip.x,
+    indexBaseX: indexBase.x,
+    middleBaseX: middleBase.x
+  });
+
   return (
-    tipDistance < 0.09 &&
-    baseDistance > 0.03 &&
-    crossedHorizontally &&
-    depthDifference > 0.01
+    tipDistance < 0.15 &&
+    baseDistance > 0.02 &&
+    crossedHorizontally
   );
 }
 
@@ -272,23 +267,28 @@ hands.onResults((results) => {
       console.log("crossed");
     }
 
-    ctx.fillStyle = "red";
+    const indexTip = landmarks[8];
+const middleTip = landmarks[12];
+
+ctx.fillStyle = "red";
 
 ctx.beginPath();
 ctx.arc(
-  landmarks[8].x * canvas.width,
-  landmarks[8].y * canvas.height,
-  10,
+  indexTip.x * canvas.width,
+  indexTip.y * canvas.height,
+  12,
   0,
   Math.PI * 2
 );
 ctx.fill();
 
+ctx.fillStyle = "blue";
+
 ctx.beginPath();
 ctx.arc(
-  landmarks[12].x * canvas.width,
-  landmarks[12].y * canvas.height,
-  10,
+  middleTip.x * canvas.width,
+  middleTip.y * canvas.height,
+  12,
   0,
   Math.PI * 2
 );
