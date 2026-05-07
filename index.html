@@ -111,29 +111,54 @@ function distance(a, b) {
 // Gestures
 // ======================
 
-function isThumbsUp(landmarks) {
+function isFingersCrossed(landmarks, handedness) {
 
-  const thumbUp =
-    landmarks[4].y < landmarks[3].y;
+  const thumb =
+    isThumbExtended(landmarks, handedness);
 
-  const indexFolded =
-    landmarks[8].y > landmarks[6].y;
+  const index =
+    isFingerExtended(8, 6, landmarks);
 
-  const middleFolded =
-    landmarks[12].y > landmarks[10].y;
+  const middle =
+    isFingerExtended(12, 10, landmarks);
 
-  const ringFolded =
-    landmarks[16].y > landmarks[14].y;
+  const ring =
+    isFingerExtended(16, 14, landmarks);
 
-  const pinkyFolded =
-    landmarks[20].y > landmarks[18].y;
+  const pinky =
+    isFingerExtended(20, 18, landmarks);
+
+  // Only index + middle extended
+  if (!(index && middle && !ring && !pinky)) {
+    return false;
+  }
+
+  // Thumb tucked
+  if (thumb) {
+    return false;
+  }
+
+  const indexTip = landmarks[8];
+  const middleTip = landmarks[12];
+
+  const indexPip = landmarks[6];
+  const middlePip = landmarks[10];
+
+  // Fingertips close together
+  const tipDistance =
+    distance(indexTip, middleTip);
+
+  // One finger crossing over the other
+  const crossed =
+    (indexTip.y > middlePip.y &&
+     middleTip.y < indexPip.y)
+    ||
+    (middleTip.y > indexPip.y &&
+     indexTip.y < middlePip.y);
 
   return (
-    thumbUp &&
-    indexFolded &&
-    middleFolded &&
-    ringFolded &&
-    pinkyFolded
+    tipDistance < 0.05 &&
+    crossed
   );
 }
 
@@ -279,21 +304,16 @@ hands.onResults((results) => {
     let gesture = null;
 
     // Priority order
-    if (isThumbsUp(landmarks)) {
+    if (
+  isFingersCrossed(
+    landmarks,
+    handedness
+  )
+) {
 
-      gesture = "thumbs up";
+  gesture = "crossed";
 
-    } else if (
-      isFingersCrossed(
-        landmarks,
-        handedness
-      )
-    ) {
-
-      gesture = "crossed";
-
-    } else {
-
+} else {
       gesture =
         getRPSGesture(
           landmarks,
