@@ -271,6 +271,28 @@ hands.onResults((results) => {
 
       console.log("crossed");
     }
+
+    ctx.fillStyle = "red";
+
+ctx.beginPath();
+ctx.arc(
+  landmarks[8].x * canvas.width,
+  landmarks[8].y * canvas.height,
+  10,
+  0,
+  Math.PI * 2
+);
+ctx.fill();
+
+ctx.beginPath();
+ctx.arc(
+  landmarks[12].x * canvas.width,
+  landmarks[12].y * canvas.height,
+  10,
+  0,
+  Math.PI * 2
+);
+ctx.fill();
   }
 });
 // ======================
