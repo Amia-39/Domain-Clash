@@ -133,8 +133,9 @@ function isFingersCrossed(landmarks) {
     indexTip.x < middleTip.x &&
     indexBase.x > middleBase.x;
 
-  const crossedHorizontally =
-    horizontalCross1 || horizontalCross2;
+ const crossedHorizontally =
+  indexTip.x < middleTip.x &&
+  indexBase.x < middleBase.x;
 
   const depthDifference =
     Math.abs(indexTip.z - middleTip.z);
